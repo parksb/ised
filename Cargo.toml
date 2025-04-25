@@ -1,8 +1,15 @@
 [package]
 name = "ised"
-description = "An interactive tool for find-and-replace across many files"
 version = "0.1.0"
 edition = "2021"
+authors = ["parksb <parkgds@gmail.com>"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/parksb/ised"
+categories = ["command-line-utilities", "text-processing"]
+exclude = ["/target/", "/tests/", "/images/"]
+description = """
+An interactive tool for find-and-replace across many files
+"""
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -18,3 +25,9 @@ toml = "0.8"
 tempfile = "3"
 tempdir = "0.3"
 assert_fs = "1"
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+codegen-units = 1
