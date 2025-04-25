@@ -5,6 +5,7 @@ use std::{fs, io};
 use tui::backend::Backend;
 use tui::Terminal;
 
+use crate::config::find_and_load_config;
 use crate::ui;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -34,6 +35,12 @@ pub struct App {
     pub confirm: ConfirmState,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         let files: Vec<String> = walkdir::WalkDir::new(".")
@@ -43,11 +50,20 @@ impl App {
             .map(|e| e.path().display().to_string())
             .collect();
 
+        let config = find_and_load_config();
+
+        let filter_input = config
+            .as_ref()
+            .and_then(|c| c.files.as_ref())
+            .and_then(|f| f.glob_filter.as_ref())
+            .map(|patterns| patterns.join(","))
+            .unwrap_or_default();
+
         App {
             files,
             selected: 0,
             offset: 0,
-            filter_input: String::new(),
+            filter_input,
             from_input: String::new(),
             to_input: String::new(),
             focus: Focus::FileList,

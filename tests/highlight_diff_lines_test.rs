@@ -1,4 +1,4 @@
-use ised::highlight_diff_lines;
+use ised::utils::highlight_diff_lines;
 use tui::text::Spans;
 
 fn spans_to_string(spans: &Spans) -> String {

@@ -2,14 +2,10 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use ised::app::App;
 use std::error::Error;
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
-
-use crate::app::App;
-
-mod app;
-mod ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;

@@ -1,5 +1,3 @@
-use ised::highlight_diff_lines;
-use ised::highlight_match;
 use std::fs;
 use tui::{
     backend::Backend,
@@ -11,6 +9,8 @@ use tui::{
 };
 
 use crate::app::{App, ConfirmState, Focus};
+use crate::utils::highlight_diff_lines;
+use crate::utils::highlight_match;
 
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) {
     let size = f.size();

@@ -1,4 +1,4 @@
-use ised::highlight_match;
+use ised::utils::highlight_match;
 use tui::text::Spans;
 
 fn spans_to_string(spans: &Spans) -> String {
