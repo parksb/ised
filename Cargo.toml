@@ -1,5 +1,6 @@
 [package]
 name = "ised"
+description = "An interactive tool for find-and-replace across many files"
 version = "0.1.0"
 edition = "2021"
 
