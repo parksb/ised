@@ -221,7 +221,7 @@ impl App {
             }
 
             KeyEvent {
-                code: KeyCode::Enter,
+                code: KeyCode::Char('a'),
                 modifiers: KeyModifiers::CONTROL,
                 ..
             } => {
