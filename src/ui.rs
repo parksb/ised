@@ -66,7 +66,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
 
     let file_list = List::new(visible_files).block(
         Block::default()
-            .title("File")
+            .title("File [L]ist")
             .borders(Borders::ALL)
             .border_style(if app.focus == Focus::FileList {
                 Style::default().fg(Color::Cyan)
@@ -78,7 +78,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
 
     let filter_input = Paragraph::new(Text::from(app.filter_input.as_str())).block(
         Block::default()
-            .title("Filter")
+            .title("[G]lob Filter")
             .borders(Borders::ALL)
             .border_style(if app.focus == Focus::FilePathFilter {
                 Style::default().fg(Color::Cyan)
@@ -124,7 +124,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
 
     let diff_view = Paragraph::new(visible_diff).block(
         Block::default()
-            .title("Diff")
+            .title("[D]iff")
             .borders(Borders::ALL)
             .border_style(if app.focus == Focus::DiffView {
                 Style::default().fg(Color::Cyan)
@@ -136,7 +136,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
 
     let from_paragraph = Paragraph::new(Text::from(app.from_input.as_str())).block(
         Block::default()
-            .title("From")
+            .title("[F]rom")
             .borders(Borders::ALL)
             .border_style(if app.focus == Focus::From {
                 Style::default().fg(Color::Cyan)
@@ -148,7 +148,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
 
     let to_paragraph = Paragraph::new(Text::from(app.to_input.as_str())).block(
         Block::default()
-            .title("To")
+            .title("[T]o")
             .borders(Borders::ALL)
             .border_style(if app.focus == Focus::To {
                 Style::default().fg(Color::Cyan)

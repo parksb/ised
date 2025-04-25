@@ -137,6 +137,46 @@ impl App {
             } => return Ok(true),
 
             KeyEvent {
+                code: KeyCode::Char('l'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                self.focus = Focus::FileList;
+            }
+
+            KeyEvent {
+                code: KeyCode::Char('g'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                self.focus = Focus::FilePathFilter;
+            }
+
+            KeyEvent {
+                code: KeyCode::Char('d'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                self.focus = Focus::DiffView;
+            }
+
+            KeyEvent {
+                code: KeyCode::Char('f'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                self.focus = Focus::From;
+            }
+
+            KeyEvent {
+                code: KeyCode::Char('t'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                self.focus = Focus::To;
+            }
+
+            KeyEvent {
                 code: KeyCode::Tab, ..
             } => {
                 self.focus = match self.focus {
