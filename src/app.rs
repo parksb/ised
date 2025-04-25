@@ -1,5 +1,4 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use globset::{Glob, GlobSetBuilder};
 use regex::Regex;
 use std::{fs, io};
 use tui::backend::Backend;
@@ -76,6 +75,11 @@ impl App {
         loop {
             let filtered_files = self.filter_files();
 
+            if self.selected >= filtered_files.len() {
+                self.selected = 0;
+                self.offset = 0;
+            }
+
             terminal.draw(|f| ui::draw(f, self, &filtered_files))?;
 
             if event::poll(std::time::Duration::from_millis(200))? {
@@ -90,7 +94,9 @@ impl App {
     }
 
     fn filter_files(&self) -> Vec<String> {
-        if self.filter_input.trim().is_empty() {
+        use globset::{Glob, GlobSetBuilder};
+
+        if self.filter_input.trim().is_empty() && self.from_input.trim().is_empty() {
             return self.files.clone();
         }
 
@@ -121,6 +127,8 @@ impl App {
         let include_set = include_builder.build().ok();
         let exclude_set = exclude_builder.build().ok();
 
+        let from_re = regex::Regex::new(&self.from_input).ok();
+
         self.files
             .iter()
             .filter(|f| {
@@ -138,7 +146,15 @@ impl App {
                     .map(|set| set.is_match(f))
                     .unwrap_or(false);
 
-                included && !excluded
+                let matches_from = if let Some(re) = &from_re {
+                    std::fs::read_to_string(f)
+                        .map(|content| re.is_match(&content))
+                        .unwrap_or(false)
+                } else {
+                    true
+                };
+
+                included && !excluded && matches_from
             })
             .cloned()
             .collect()
