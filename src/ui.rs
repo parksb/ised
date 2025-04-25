@@ -9,6 +9,7 @@ use tui::{
 };
 
 use crate::app::{App, ConfirmState, Focus};
+use crate::utils::apply_substitution_partial;
 use crate::utils::highlight_diff_lines;
 use crate::utils::highlight_match;
 
@@ -99,11 +100,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
     let selected_file = filtered_files.get(app.selected).map(|s| s.to_string());
     let diff_output = if let Some(file_path) = selected_file {
         if let Ok(content) = fs::read_to_string(&file_path) {
-            let from_re =
-                regex::Regex::new(&app.from_input).unwrap_or(regex::Regex::new("$^").unwrap());
-            let replaced = from_re
-                .replace_all(&content, app.to_input.as_str())
-                .to_string();
+            let replaced = apply_substitution_partial(&content, &app.from_input, &app.to_input);
             highlight_diff_lines(content, replaced)
         } else {
             vec![Spans::from(Span::styled(

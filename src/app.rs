@@ -1,11 +1,11 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use regex::Regex;
 use std::{fs, io};
 use tui::backend::Backend;
 use tui::Terminal;
 
 use crate::config::find_and_load_config;
 use crate::ui;
+use crate::utils::apply_substitution_partial;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Focus {
@@ -359,8 +359,8 @@ impl App {
 
     fn apply_substitution(&self, path: &str) -> io::Result<()> {
         let content = fs::read_to_string(path)?;
-        let re = Regex::new(&self.from_input).unwrap_or_else(|_| Regex::new("$^").unwrap());
-        let replaced = re.replace_all(&content, self.to_input.as_str()).to_string();
-        fs::write(path, replaced)
+        let replaced = apply_substitution_partial(&content, &self.from_input, &self.to_input);
+        fs::write(path, replaced)?;
+        Ok(())
     }
 }

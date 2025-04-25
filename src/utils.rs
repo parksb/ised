@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use regex::{Captures, Regex};
 use tui::{
     style::{Color, Modifier, Style},
     text::{Span, Spans},
@@ -52,4 +53,22 @@ pub fn highlight_diff_lines(original: String, replaced: String) -> Vec<Spans<'st
             ])],
         })
         .collect()
+}
+
+pub fn apply_substitution_partial(
+    content: &str,
+    from_pattern: &str,
+    to_replacement: &str,
+) -> String {
+    let re = Regex::new(from_pattern).unwrap_or_else(|_| Regex::new("$^").unwrap());
+
+    re.replace_all(content, |caps: &Captures| {
+        let mut replaced = to_replacement.to_string();
+        for i in 1..caps.len() {
+            let group_ref = format!("${}", i);
+            replaced = replaced.replace(&group_ref, caps.get(i).map_or("", |m| m.as_str()));
+        }
+        replaced
+    })
+    .to_string()
 }
