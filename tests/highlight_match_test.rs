@@ -1,5 +1,4 @@
 use ised::highlight_match;
-use regex::Regex;
 use tui::text::Spans;
 
 fn spans_to_string(spans: &Spans) -> String {
@@ -13,52 +12,56 @@ fn spans_to_string(spans: &Spans) -> String {
 #[test]
 fn test_highlight_no_match() {
     let input = "this line has no match";
-    let re = Regex::new("not_found").ok();
-    let result = highlight_match(input, &re);
+    let pattern = "not_found";
+    let result = highlight_match(input, pattern);
 
     assert_eq!(result.len(), 1);
     let line = spans_to_string(&result[0]);
     assert_eq!(line, input);
+
+    assert!(result[0].0.iter().all(|s| s.style.fg.is_none()));
 }
 
 #[test]
 fn test_highlight_single_match() {
     let input = "match here please";
-    let re = Regex::new("match").ok();
-    let result = highlight_match(input, &re);
-
-    let line = spans_to_string(&result[0]);
-    assert_eq!(line, "match here please");
-
-    // check highlighted section is styled
-    assert_eq!(result[0].0.len(), 2); // "match" and the rest
-    assert_eq!(result[0].0[0].content.as_ref(), "match");
-    assert!(result[0].0[0].style.fg == Some(tui::style::Color::Green));
-}
-
-#[test]
-fn test_highlight_multiple_matches() {
-    let input = "repeat repeat repeat";
-    let re = Regex::new("repeat").ok();
-    let result = highlight_match(input, &re);
+    let pattern = "match";
+    let result = highlight_match(input, pattern);
 
     let line = spans_to_string(&result[0]);
     assert_eq!(line, input);
+
+    assert_eq!(result[0].0.len(), 2);
+
+    let first = &result[0].0[0];
+    assert_eq!(first.content.as_ref(), "match");
+    assert_eq!(first.style.fg, Some(tui::style::Color::Green));
+}
+
+#[test]
+fn test_highlight_multiple_matches_only_first() {
+    let input = "repeat repeat repeat";
+    let pattern = "repeat";
+    let result = highlight_match(input, pattern);
+
+    let line = spans_to_string(&result[0]);
+    assert_eq!(line, input);
+
     assert_eq!(
         result[0]
             .0
             .iter()
             .filter(|s| s.style.fg == Some(tui::style::Color::Green))
             .count(),
-        3
+        1
     );
 }
 
 #[test]
 fn test_highlight_partial_match() {
     let input = "only match part of this";
-    let re = Regex::new("part").ok();
-    let result = highlight_match(input, &re);
+    let pattern = "part";
+    let result = highlight_match(input, pattern);
 
     let line = spans_to_string(&result[0]);
     assert!(line.contains("part"));

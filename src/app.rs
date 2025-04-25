@@ -1,4 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use globset::{Glob, GlobSetBuilder};
 use regex::Regex;
 use std::{fs, io};
 use tui::backend::Backend;
@@ -57,10 +58,9 @@ impl App {
 
     pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         loop {
-            let filter_re = Regex::new(&self.filter_input).ok();
-            let filtered_files = self.filter_files(&filter_re);
+            let filtered_files = self.filter_files();
 
-            terminal.draw(|f| ui::draw(f, self, &filtered_files, &filter_re))?;
+            terminal.draw(|f| ui::draw(f, self, &filtered_files))?;
 
             if event::poll(std::time::Duration::from_millis(200))? {
                 if let Event::Key(key) = event::read()? {
@@ -73,10 +73,57 @@ impl App {
         Ok(())
     }
 
-    fn filter_files(&self, re: &Option<Regex>) -> Vec<String> {
+    fn filter_files(&self) -> Vec<String> {
+        if self.filter_input.trim().is_empty() {
+            return self.files.clone();
+        }
+
+        let patterns: Vec<_> = self
+            .filter_input
+            .split(',')
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .collect();
+
+        let mut include_builder = GlobSetBuilder::new();
+        let mut exclude_builder = GlobSetBuilder::new();
+        let mut has_include = false;
+
+        for pat in &patterns {
+            if let Some(stripped) = pat.strip_prefix('!') {
+                if let Ok(glob) = Glob::new(stripped) {
+                    exclude_builder.add(glob);
+                }
+            } else {
+                has_include = true;
+                if let Ok(glob) = Glob::new(pat) {
+                    include_builder.add(glob);
+                }
+            }
+        }
+
+        let include_set = include_builder.build().ok();
+        let exclude_set = exclude_builder.build().ok();
+
         self.files
             .iter()
-            .filter(|f| re.as_ref().map_or(true, |re| re.is_match(f)))
+            .filter(|f| {
+                let included = if has_include {
+                    include_set
+                        .as_ref()
+                        .map(|set| set.is_match(f))
+                        .unwrap_or(false)
+                } else {
+                    true
+                };
+
+                let excluded = exclude_set
+                    .as_ref()
+                    .map(|set| set.is_match(f))
+                    .unwrap_or(false);
+
+                included && !excluded
+            })
             .cloned()
             .collect()
     }

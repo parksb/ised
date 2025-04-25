@@ -1,5 +1,5 @@
-use ised::{highlight_diff_lines, highlight_match};
-use regex::Regex;
+use ised::highlight_diff_lines;
+use ised::highlight_match;
 use std::fs;
 use tui::{
     backend::Backend,
@@ -12,12 +12,7 @@ use tui::{
 
 use crate::app::{App, ConfirmState, Focus};
 
-pub fn draw<B: Backend>(
-    f: &mut Frame<B>,
-    app: &App,
-    filtered_files: &[String],
-    filter_re: &Option<Regex>,
-) {
+pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) {
     let size = f.size();
     let columns = Layout::default()
         .direction(Direction::Horizontal)
@@ -56,7 +51,7 @@ pub fn draw<B: Backend>(
         .take(list_height)
         .enumerate()
         .map(|(i, fpath)| {
-            let content = highlight_match(fpath, filter_re);
+            let content = highlight_match(fpath, &app.filter_input);
             let mut item = ListItem::new(content);
             if i + offset == app.selected {
                 item = item.style(
@@ -104,7 +99,8 @@ pub fn draw<B: Backend>(
     let selected_file = filtered_files.get(app.selected).map(|s| s.to_string());
     let diff_output = if let Some(file_path) = selected_file {
         if let Ok(content) = fs::read_to_string(&file_path) {
-            let from_re = Regex::new(&app.from_input).unwrap_or(Regex::new("$^").unwrap());
+            let from_re =
+                regex::Regex::new(&app.from_input).unwrap_or(regex::Regex::new("$^").unwrap());
             let replaced = from_re
                 .replace_all(&content, app.to_input.as_str())
                 .to_string();

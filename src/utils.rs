@@ -1,28 +1,23 @@
 use itertools::Itertools;
-use regex::Regex;
 use tui::{
     style::{Color, Modifier, Style},
     text::{Span, Spans},
 };
 
-pub fn highlight_match<'a>(text: &'a str, re: &Option<Regex>) -> Vec<Spans<'a>> {
-    if let Some(re) = re {
+pub fn highlight_match<'a>(text: &'a str, pattern: &str) -> Vec<Spans<'a>> {
+    if let Some(index) = text.find(pattern) {
         let mut spans = vec![];
-        let mut last_end = 0;
-        for mat in re.find_iter(text) {
-            if mat.start() > last_end {
-                spans.push(Span::raw(&text[last_end..mat.start()]));
-            }
-            spans.push(Span::styled(
-                &text[mat.start()..mat.end()],
-                Style::default()
-                    .fg(Color::Green)
-                    .add_modifier(Modifier::BOLD),
-            ));
-            last_end = mat.end();
+        if index > 0 {
+            spans.push(Span::raw(&text[..index]));
         }
-        if last_end < text.len() {
-            spans.push(Span::raw(&text[last_end..]));
+        spans.push(Span::styled(
+            &text[index..index + pattern.len()],
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ));
+        if index + pattern.len() < text.len() {
+            spans.push(Span::raw(&text[index + pattern.len()..]));
         }
         vec![Spans::from(spans)]
     } else {
