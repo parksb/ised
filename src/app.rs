@@ -5,7 +5,7 @@ use tui::Terminal;
 
 use crate::config::find_and_load_config;
 use crate::ui;
-use crate::utils::apply_substitution_partial;
+use crate::utils::{apply_substitution_partial, is_text_file};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Focus {
@@ -49,6 +49,7 @@ impl App {
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
+            .filter(|e| is_text_file(e.path()))
             .map(|e| e.path().display().to_string())
             .collect();
 

@@ -72,3 +72,23 @@ pub fn apply_substitution_partial(
     })
     .to_string()
 }
+
+pub fn is_text_file(path: &std::path::Path) -> bool {
+    use std::fs::File;
+    use std::io::Read;
+
+    const BUFFER_SIZE: usize = 4096;
+
+    let mut file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+
+    let mut buffer = [0u8; BUFFER_SIZE];
+    let n = match file.read(&mut buffer) {
+        Ok(n) => n,
+        Err(_) => return false,
+    };
+
+    !buffer[..n].contains(&0)
+}
