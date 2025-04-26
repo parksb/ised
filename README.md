@@ -14,19 +14,32 @@
 
 ## Installation
 
+If you are on macOS, you can install ised using Homebrew.
+
+```sh
+$ brew install parksb/x/ised
+```
+
 If you have Rust installed, you can install ised directly from crates.io.
 
 ```sh
-cargo install ised
+$ cargo install ised
+```
+
+Prebuilt binaries for Linux and macOS are available on the [GitHub Releases](https://github.com/parksb/ised/releases) page. Download the appropriate archive for your platform, extract it, and move the binary into your `PATH`.
+
+```sh
+$ tar -xzf ised-x86_64-unknown-linux-gnu.tar.gz # for Linux x86_64. if you are on another platform, use the appropriate archive.
+$ mv ised-x86_64-unknown-linux-gnu /usr/local/bin/ised
 ```
 
 Alternatively, you can build from source manually.
 
 ```sh
-git clone https://github.com/parksb/ised.git
-cd ised
-cargo build --release
-./target/release/ised
+$ git clone https://github.com/parksb/ised.git
+$ cd ised
+$ cargo build --release
+$ ./target/release/ised
 ```
 
 ## Layout
