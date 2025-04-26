@@ -6,7 +6,7 @@ authors = ["parksb <parkgds@gmail.com>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/parksb/ised"
 categories = ["command-line-utilities", "text-processing"]
-exclude = ["/target/", "/tests/", "/images/"]
+exclude = ["/target/", "/tests/", "/images/", "/.github/"]
 description = """
 An interactive tool for find-and-replace across many files
 """
