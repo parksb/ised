@@ -8,14 +8,50 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: build and upload binaries
+  build-linux:
+    name: build linux binaries
     runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - name: install cross toolchain for aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: cargo install cross
+      - name: build binary
+        run: |
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+      - name: prepare binary
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/ised dist/ised-${{ matrix.target }}
+      - name: upload binary
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-macos:
+    name: build macos binaries
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
     steps:
@@ -28,15 +64,14 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
-      - name: build binaries
+      - name: build binary
         run: |
           cargo build --release --target ${{ matrix.target }}
-      - name: prepare binaries
+      - name: prepare binary
         run: |
           mkdir -p dist
-          BIN_NAME=ised
-          cp target/${{ matrix.target }}/release/$BIN_NAME dist/$BIN_NAME-${{ matrix.target }}
-      - name: upload binaries
+          cp target/${{ matrix.target }}/release/ised dist/ised-${{ matrix.target }}
+      - name: upload binary
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
