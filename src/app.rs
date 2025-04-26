@@ -27,8 +27,11 @@ pub struct App {
     pub selected: usize,
     pub offset: usize,
     pub filter_input: String,
+    pub filter_cursor: usize,
     pub from_input: String,
+    pub from_cursor: usize,
     pub to_input: String,
+    pub to_cursor: usize,
     pub focus: Focus,
     pub diff_scroll: usize,
     pub confirm: ConfirmState,
@@ -63,8 +66,11 @@ impl App {
             selected: 0,
             offset: 0,
             filter_input,
+            filter_cursor: 0,
             from_input: String::new(),
+            from_cursor: 0,
             to_input: String::new(),
+            to_cursor: 0,
             focus: Focus::FileList,
             diff_scroll: 0,
             confirm: ConfirmState::None,
@@ -305,6 +311,50 @@ impl App {
             },
 
             KeyEvent {
+                code: KeyCode::Left,
+                ..
+            } => match self.focus {
+                Focus::FilePathFilter => {
+                    if self.filter_cursor > 0 {
+                        self.filter_cursor -= 1;
+                    }
+                }
+                Focus::From => {
+                    if self.from_cursor > 0 {
+                        self.from_cursor -= 1;
+                    }
+                }
+                Focus::To => {
+                    if self.to_cursor > 0 {
+                        self.to_cursor -= 1;
+                    }
+                }
+                _ => {}
+            },
+
+            KeyEvent {
+                code: KeyCode::Right,
+                ..
+            } => match self.focus {
+                Focus::FilePathFilter => {
+                    if self.filter_cursor < self.filter_input.len() {
+                        self.filter_cursor += 1;
+                    }
+                }
+                Focus::From => {
+                    if self.from_cursor < self.from_input.len() {
+                        self.from_cursor += 1;
+                    }
+                }
+                Focus::To => {
+                    if self.to_cursor < self.to_input.len() {
+                        self.to_cursor += 1;
+                    }
+                }
+                _ => {}
+            },
+
+            KeyEvent {
                 code: KeyCode::Char(c),
                 ..
             } => match c {
@@ -330,15 +380,24 @@ impl App {
                 ..
             } => match self.focus {
                 Focus::FilePathFilter => {
-                    self.filter_input.pop();
+                    if self.filter_cursor > 0 {
+                        self.filter_input.remove(self.filter_cursor - 1);
+                        self.filter_cursor -= 1;
+                    }
                     self.selected = 0;
                     self.offset = 0;
                 }
                 Focus::From => {
-                    self.from_input.pop();
+                    if self.from_cursor > 0 {
+                        self.from_input.remove(self.from_cursor - 1);
+                        self.from_cursor -= 1;
+                    }
                 }
                 Focus::To => {
-                    self.to_input.pop();
+                    if self.to_cursor > 0 {
+                        self.to_input.remove(self.to_cursor - 1);
+                        self.to_cursor -= 1;
+                    }
                 }
                 _ => {}
             },
@@ -350,9 +409,18 @@ impl App {
 
     fn push_input(&mut self, c: char) {
         match self.focus {
-            Focus::FilePathFilter => self.filter_input.push(c),
-            Focus::From => self.from_input.push(c),
-            Focus::To => self.to_input.push(c),
+            Focus::FilePathFilter => {
+                self.filter_input.insert(self.filter_cursor, c);
+                self.filter_cursor += 1;
+            }
+            Focus::From => {
+                self.from_input.insert(self.from_cursor, c);
+                self.from_cursor += 1;
+            }
+            Focus::To => {
+                self.to_input.insert(self.to_cursor, c);
+                self.to_cursor += 1;
+            }
             _ => {}
         }
     }

@@ -88,6 +88,12 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
             }),
     );
     f.render_widget(filter_input, left_rows[1]);
+    if app.focus == Focus::FilePathFilter {
+        f.set_cursor(
+            left_rows[1].x + 1 + app.filter_cursor as u16,
+            left_rows[1].y + 1,
+        );
+    }
 
     let blank_text = match &app.confirm {
         ConfirmState::Confirming(path) => format!("Apply changes to {}? (y/n)", path),
@@ -142,6 +148,12 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
             }),
     );
     f.render_widget(from_paragraph, right_rows[1]);
+    if app.focus == Focus::From {
+        f.set_cursor(
+            right_rows[1].x + 1 + app.from_cursor as u16,
+            right_rows[1].y + 1,
+        );
+    }
 
     let to_paragraph = Paragraph::new(Text::from(app.to_input.as_str())).block(
         Block::default()
@@ -154,4 +166,10 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
             }),
     );
     f.render_widget(to_paragraph, right_rows[2]);
+    if app.focus == Focus::To {
+        f.set_cursor(
+            right_rows[2].x + 1 + app.to_cursor as u16,
+            right_rows[2].y + 1,
+        );
+    }
 }
