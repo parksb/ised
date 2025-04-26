@@ -12,6 +12,23 @@
 - **Safe by default**: No changes are applied without confirmation. Accidental replacements are avoided entirely.
 - **Minimal and focused**: Designed to do one job well. No external dependencies. Runs entirely in your terminal.
 
+## Installation
+
+If you have Rust installed, you can install ised directly from crates.io.
+
+```sh
+cargo install ised
+```
+
+Alternatively, you can build from source manually.
+
+```sh
+git clone https://github.com/parksb/ised.git
+cd ised
+cargo build --release
+./target/release/ised
+```
+
 ## Layout
 
 ised splits the screen into five main regions:
