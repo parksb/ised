@@ -98,7 +98,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
     let blank_text = match &app.confirm {
         ConfirmState::Confirming(path) => format!("Apply changes to {}? (y/n)", path),
         ConfirmState::ConfirmingAll(_) => "Apply changes to ALL files? (y/n)".to_string(),
-        ConfirmState::None => "ised v0.2.0".to_string(),
+        ConfirmState::None => "".to_string(),
     };
     let blank = Paragraph::new(Text::from(blank_text));
     f.render_widget(blank, left_rows[2]);
