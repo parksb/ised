@@ -39,8 +39,8 @@ jobs:
       - name: prepare binary
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ised dist/ised-${{ matrix.target }}
-          cd dist && tar -czvf ised-${{ matrix.target }}.tar.gz ised-${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/ised dist/ised
+          cd dist && tar -czvf ised-${{ matrix.target }}.tar.gz ised
       - name: upload binary
         uses: softprops/action-gh-release@v2
         with:
@@ -71,8 +71,8 @@ jobs:
       - name: prepare binary
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ised dist/ised-${{ matrix.target }}
-          cd dist && tar -czvf ised-${{ matrix.target }}.tar.gz ised-${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/ised dist/ised
+          cd dist && tar -czvf ised-${{ matrix.target }}.tar.gz ised
       - name: upload binary
         uses: softprops/action-gh-release@v2
         with:
