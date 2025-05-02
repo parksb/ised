@@ -3,9 +3,9 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ised::app::App;
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::error::Error;
 use std::io;
-use tui::{backend::CrosstermBackend, Terminal};
 
 fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;

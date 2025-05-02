@@ -1,20 +1,19 @@
-use std::fs;
-use tui::{
-    backend::Backend,
-    layout::{Constraint, Direction, Layout},
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Position},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
+use std::fs;
 
 use crate::app::{App, ConfirmState, Focus};
 use crate::utils::apply_substitution_partial;
 use crate::utils::highlight_diff_lines;
 use crate::utils::highlight_match;
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) {
-    let size = f.size();
+pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String]) {
+    let size = f.area();
     let columns = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -89,10 +88,10 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
     );
     f.render_widget(filter_input, left_rows[1]);
     if app.focus == Focus::FilePathFilter {
-        f.set_cursor(
+        f.set_cursor_position(Position::new(
             left_rows[1].x + 1 + app.filter_cursor as u16,
             left_rows[1].y + 1,
-        );
+        ));
     }
 
     let blank_text = match &app.confirm {
@@ -109,13 +108,13 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
             let replaced = apply_substitution_partial(&content, &app.from_input, &app.to_input);
             highlight_diff_lines(content, replaced)
         } else {
-            vec![Spans::from(Span::styled(
+            vec![Line::from(Span::styled(
                 "Failed to read file.",
                 Style::default().fg(Color::Red),
             ))]
         }
     } else {
-        vec![Spans::from("No file selected.")]
+        vec![Line::from("No file selected.")]
     };
 
     let height = right_rows[0].height as usize - 2;
@@ -149,10 +148,10 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
     );
     f.render_widget(from_paragraph, right_rows[1]);
     if app.focus == Focus::From {
-        f.set_cursor(
+        f.set_cursor_position(Position::new(
             right_rows[1].x + 1 + app.from_cursor as u16,
             right_rows[1].y + 1,
-        );
+        ));
     }
 
     let to_paragraph = Paragraph::new(Text::from(app.to_input.as_str())).block(
@@ -167,9 +166,9 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App, filtered_files: &[String]) 
     );
     f.render_widget(to_paragraph, right_rows[2]);
     if app.focus == Focus::To {
-        f.set_cursor(
+        f.set_cursor_position(Position::new(
             right_rows[2].x + 1 + app.to_cursor as u16,
             right_rows[2].y + 1,
-        );
+        ));
     }
 }

@@ -1,7 +1,7 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use ratatui::backend::Backend;
+use ratatui::Terminal;
 use std::{fs, io};
-use tui::backend::Backend;
-use tui::Terminal;
 
 use crate::config::find_and_load_config;
 use crate::ui;
