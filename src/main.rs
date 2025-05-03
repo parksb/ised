@@ -1,5 +1,5 @@
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{DisableMouseCapture, EnableMouseCapture, Event},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -7,6 +7,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 use std::sync::mpsc;
+use std::time::Duration;
 
 use crate::app::App;
 
@@ -51,13 +52,15 @@ async fn main() -> io::Result<()> {
 
         terminal.draw(|f| ui::draw(f, &app, &filtered_files, file_content))?;
 
-        if crossterm::event::poll(std::time::Duration::from_millis(200))? {
-            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
+        if crossterm::event::poll(Duration::from_millis(200))? {
+            if let Event::Key(key) = crossterm::event::read()? {
                 if app.handle_key_event(key, &filtered_files)? {
                     break Ok(());
                 }
             }
         }
+
+        app.spin();
     };
 
     disable_raw_mode()?;

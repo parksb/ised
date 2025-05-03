@@ -37,7 +37,7 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
         .split(columns[1]);
 
     if app.is_loading {
-        let loading_text = Paragraph::new(Text::from("Loading files..."))
+        let loading_text = Paragraph::new(Text::from(format!("{} Loading files...", app.spinner)))
             .block(Block::default().title("File [L]ist").borders(Borders::ALL));
         f.render_widget(loading_text, left_rows[0]);
     } else {

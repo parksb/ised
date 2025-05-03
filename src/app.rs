@@ -42,6 +42,7 @@ pub struct App {
     pub diff_scroll: usize,
     pub confirm: ConfirmState,
     pub is_loading: bool,
+    pub spinner: char,
     file_cache: Arc<RwLock<FileCache>>,
     filtered_files_cache: Arc<RwLock<Option<FilterCache>>>,
     #[allow(dead_code)]
@@ -65,6 +66,7 @@ impl Clone for App {
             diff_scroll: self.diff_scroll,
             confirm: self.confirm.clone(),
             is_loading: self.is_loading,
+            spinner: self.spinner,
             file_cache: self.file_cache.clone(),
             filtered_files_cache: self.filtered_files_cache.clone(),
             file_watcher: None,
@@ -119,6 +121,8 @@ impl App {
             let _ = w.watch(Path::new("."), RecursiveMode::Recursive);
         }
 
+        let spinner = '|';
+
         Self {
             files: Vec::new(),
             selected: 0,
@@ -133,6 +137,7 @@ impl App {
             diff_scroll: 0,
             confirm: ConfirmState::None,
             is_loading: true,
+            spinner,
             file_cache,
             filtered_files_cache,
             file_watcher: watcher,
@@ -547,5 +552,15 @@ impl App {
         }
 
         Ok(())
+    }
+
+    pub fn spin(&mut self) {
+        self.spinner = match self.spinner {
+            '|' => '/',
+            '/' => '-',
+            '-' => '\\',
+            '\\' => '|',
+            _ => '|',
+        };
     }
 }
