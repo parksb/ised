@@ -550,6 +550,17 @@ impl App {
         let content = fs::read_to_string(path)?;
         let replaced = apply_substitution_partial(&content, &self.from_input, &self.to_input);
         fs::write(path, replaced)?;
+
+        {
+            let mut cache = self.file_cache.write();
+            cache.remove(path);
+        }
+
+        {
+            let mut cache = self.filtered_files_cache.write();
+            *cache = None;
+        }
+
         Ok(())
     }
 }
