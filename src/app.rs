@@ -1,7 +1,10 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use notify::{Event as NotifyEvent, RecursiveMode, Result as NotifyResult, Watcher};
 use parking_lot::RwLock;
 use ratatui::backend::Backend;
 use ratatui::Terminal;
+use rayon::prelude::*;
+use std::path::Path;
 use std::sync::Arc;
 use std::{collections::HashMap, fs, io};
 use tokio::{fs as tokio_fs, time};
@@ -43,6 +46,9 @@ pub struct App {
     pub confirm: ConfirmState,
     file_cache: Arc<RwLock<FileCache>>,
     filtered_files_cache: Arc<RwLock<Option<FilterCache>>>,
+    #[allow(dead_code)]
+    file_watcher: Option<notify::RecommendedWatcher>,
+    regex_cache: Arc<RwLock<HashMap<String, regex::Regex>>>,
 }
 
 impl Default for App {
@@ -55,6 +61,7 @@ impl App {
     pub fn new() -> Self {
         let files: Vec<String> = walkdir::WalkDir::new(".")
             .into_iter()
+            .par_bridge()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
             .filter(|e| is_text_file(e.path()))
@@ -70,6 +77,36 @@ impl App {
             .map(|patterns| patterns.join(","))
             .unwrap_or_default();
 
+        let file_cache = Arc::new(RwLock::new(HashMap::new()));
+        let filtered_files_cache = Arc::new(RwLock::new(None));
+
+        let file_cache_clone = file_cache.clone();
+        let filtered_files_cache_clone = filtered_files_cache.clone();
+
+        let mut watcher = notify::recommended_watcher(move |res: NotifyResult<NotifyEvent>| {
+            if let Ok(event) = res {
+                match event.kind {
+                    notify::EventKind::Create(_) | notify::EventKind::Modify(_) => {
+                        // Clear caches when files change
+                        if let Some(path) = event.paths.first() {
+                            if let Some(path_str) = path.to_str() {
+                                let mut cache = file_cache_clone.write();
+                                cache.remove(path_str);
+                                let mut filtered_cache = filtered_files_cache_clone.write();
+                                *filtered_cache = None;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .ok();
+
+        if let Some(w) = &mut watcher {
+            let _ = w.watch(Path::new("."), RecursiveMode::Recursive);
+        }
+
         Self {
             files,
             selected: 0,
@@ -83,8 +120,10 @@ impl App {
             focus: Focus::FileList,
             diff_scroll: 0,
             confirm: ConfirmState::None,
-            file_cache: Arc::new(RwLock::new(HashMap::new())),
-            filtered_files_cache: Arc::new(RwLock::new(None)),
+            file_cache,
+            filtered_files_cache,
+            file_watcher: watcher,
+            regex_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -159,11 +198,26 @@ impl App {
         let include_set = include_builder.build().ok();
         let exclude_set = exclude_builder.build().ok();
 
-        let from_re = regex::Regex::new(&self.from_input).ok();
+        let from_re = if !self.from_input.is_empty() {
+            {
+                let cache = self.regex_cache.read();
+                cache.get(&self.from_input).cloned()
+            }
+        } else {
+            None
+        };
+
+        let from_re = from_re.or_else(|| {
+            regex::Regex::new(&self.from_input).ok().inspect(|re| {
+                self.regex_cache
+                    .write()
+                    .insert(self.from_input.clone(), re.clone());
+            })
+        });
 
         let filtered_files: Vec<String> = self
             .files
-            .iter()
+            .par_iter()
             .filter(|f| {
                 let included = if has_include {
                     include_set

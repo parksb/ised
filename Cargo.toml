@@ -22,6 +22,9 @@ walkdir = "2.4"
 globset = "0.4"
 toml = "0.8"
 parking_lot = "0.12"
+rayon = "1.8"
+memmap2 = "0.9"
+notify = "6.1"
 
 [dev-dependencies]
 tempfile = "3"
