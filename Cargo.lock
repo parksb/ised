@@ -386,6 +386,7 @@ dependencies = [
  "crossterm",
  "globset",
  "itertools 0.14.0",
+ "parking_lot",
  "ratatui",
  "regex",
  "serde",

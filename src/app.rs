@@ -1,12 +1,17 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use parking_lot::RwLock;
 use ratatui::backend::Backend;
 use ratatui::Terminal;
-use std::{fs, io};
+use std::sync::Arc;
+use std::{collections::HashMap, fs, io};
 use tokio::{fs as tokio_fs, time};
 
 use crate::config::find_and_load_config;
 use crate::ui;
 use crate::utils::{apply_substitution_partial, is_text_file};
+
+type FilterCache = (String, String, Vec<String>);
+type FileCache = HashMap<String, String>;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Focus {
@@ -36,6 +41,8 @@ pub struct App {
     pub focus: Focus,
     pub diff_scroll: usize,
     pub confirm: ConfirmState,
+    file_cache: Arc<RwLock<FileCache>>,
+    filtered_files_cache: Arc<RwLock<Option<FilterCache>>>,
 }
 
 impl Default for App {
@@ -63,7 +70,7 @@ impl App {
             .map(|patterns| patterns.join(","))
             .unwrap_or_default();
 
-        App {
+        Self {
             files,
             selected: 0,
             offset: 0,
@@ -76,6 +83,8 @@ impl App {
             focus: Focus::FileList,
             diff_scroll: 0,
             confirm: ConfirmState::None,
+            file_cache: Arc::new(RwLock::new(HashMap::new())),
+            filtered_files_cache: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -114,6 +123,15 @@ impl App {
             return self.files.clone();
         }
 
+        {
+            let cache = self.filtered_files_cache.read();
+            if let Some((cached_filter, cached_from, cached_files)) = &*cache {
+                if *cached_filter == self.filter_input && *cached_from == self.from_input {
+                    return cached_files.clone();
+                }
+            }
+        }
+
         let patterns: Vec<_> = self
             .filter_input
             .split(',')
@@ -143,7 +161,8 @@ impl App {
 
         let from_re = regex::Regex::new(&self.from_input).ok();
 
-        self.files
+        let filtered_files: Vec<String> = self
+            .files
             .iter()
             .filter(|f| {
                 let included = if has_include {
@@ -161,9 +180,22 @@ impl App {
                     .unwrap_or(false);
 
                 let matches_from = if let Some(re) = &from_re {
-                    std::fs::read_to_string(f)
-                        .map(|content| re.is_match(&content))
-                        .unwrap_or(false)
+                    let content = {
+                        let cache = self.file_cache.read();
+                        cache.get(*f).cloned()
+                    };
+
+                    if let Some(content) = content {
+                        re.is_match(&content)
+                    } else {
+                        std::fs::read_to_string(f)
+                            .map(|content| {
+                                let mut cache = self.file_cache.write();
+                                cache.insert(f.to_string(), content.clone());
+                                re.is_match(&content)
+                            })
+                            .unwrap_or(false)
+                    }
                 } else {
                     true
                 };
@@ -171,11 +203,34 @@ impl App {
                 included && !excluded && matches_from
             })
             .cloned()
-            .collect()
+            .collect();
+
+        {
+            let mut cache = self.filtered_files_cache.write();
+            *cache = Some((
+                self.filter_input.clone(),
+                self.from_input.clone(),
+                filtered_files.clone(),
+            ));
+        }
+
+        filtered_files
     }
 
     async fn read_file_content(&self, path: &str) -> io::Result<String> {
-        tokio_fs::read_to_string(path).await
+        {
+            let cache = self.file_cache.read();
+            if let Some(content) = cache.get(path) {
+                return Ok(content.clone());
+            }
+        }
+
+        let content = tokio_fs::read_to_string(path).await?;
+        {
+            let mut cache = self.file_cache.write();
+            cache.insert(path.to_string(), content.clone());
+        }
+        Ok(content)
     }
 
     fn handle_key_event(&mut self, key: KeyEvent, filtered_files: &[String]) -> io::Result<bool> {
