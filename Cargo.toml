@@ -12,7 +12,7 @@ An interactive tool for find-and-replace across many files
 """
 
 [dependencies]
-tokio = { version = "1.44", features = ["rt-multi-thread", "macros", "fs", "time"] }
+tokio = { version = "1.44", features = ["rt-multi-thread", "macros", "fs", "time", "sync"] }
 serde = { version = "1.0", features = ["derive"] }
 crossterm = "0.28.1"
 itertools = "0.14.0"

@@ -1,16 +1,12 @@
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use notify::{Event as NotifyEvent, RecursiveMode, Result as NotifyResult, Watcher};
 use parking_lot::RwLock;
-use ratatui::backend::Backend;
-use ratatui::Terminal;
 use rayon::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 use std::{collections::HashMap, fs, io};
-use tokio::{fs as tokio_fs, time};
 
 use crate::config::find_and_load_config;
-use crate::ui;
 use crate::utils::{apply_substitution_partial, is_text_file};
 
 type FilterCache = (String, String, Vec<String>);
@@ -25,6 +21,7 @@ pub enum Focus {
     To,
 }
 
+#[derive(Clone)]
 pub enum ConfirmState {
     None,
     Confirming(String),
@@ -44,11 +41,36 @@ pub struct App {
     pub focus: Focus,
     pub diff_scroll: usize,
     pub confirm: ConfirmState,
+    pub is_loading: bool,
     file_cache: Arc<RwLock<FileCache>>,
     filtered_files_cache: Arc<RwLock<Option<FilterCache>>>,
     #[allow(dead_code)]
     file_watcher: Option<notify::RecommendedWatcher>,
     regex_cache: Arc<RwLock<HashMap<String, regex::Regex>>>,
+}
+
+impl Clone for App {
+    fn clone(&self) -> Self {
+        Self {
+            files: self.files.clone(),
+            selected: self.selected,
+            offset: self.offset,
+            filter_input: self.filter_input.clone(),
+            filter_cursor: self.filter_cursor,
+            from_input: self.from_input.clone(),
+            from_cursor: self.from_cursor,
+            to_input: self.to_input.clone(),
+            to_cursor: self.to_cursor,
+            focus: self.focus,
+            diff_scroll: self.diff_scroll,
+            confirm: self.confirm.clone(),
+            is_loading: self.is_loading,
+            file_cache: self.file_cache.clone(),
+            filtered_files_cache: self.filtered_files_cache.clone(),
+            file_watcher: None,
+            regex_cache: self.regex_cache.clone(),
+        }
+    }
 }
 
 impl Default for App {
@@ -59,15 +81,6 @@ impl Default for App {
 
 impl App {
     pub fn new() -> Self {
-        let files: Vec<String> = walkdir::WalkDir::new(".")
-            .into_iter()
-            .par_bridge()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
-            .filter(|e| is_text_file(e.path()))
-            .map(|e| e.path().display().to_string())
-            .collect();
-
         let config = find_and_load_config();
 
         let filter_input = config
@@ -87,7 +100,6 @@ impl App {
             if let Ok(event) = res {
                 match event.kind {
                     notify::EventKind::Create(_) | notify::EventKind::Modify(_) => {
-                        // Clear caches when files change
                         if let Some(path) = event.paths.first() {
                             if let Some(path_str) = path.to_str() {
                                 let mut cache = file_cache_clone.write();
@@ -108,7 +120,7 @@ impl App {
         }
 
         Self {
-            files,
+            files: Vec::new(),
             selected: 0,
             offset: 0,
             filter_input,
@@ -120,6 +132,7 @@ impl App {
             focus: Focus::FileList,
             diff_scroll: 0,
             confirm: ConfirmState::None,
+            is_loading: true,
             file_cache,
             filtered_files_cache,
             file_watcher: watcher,
@@ -127,35 +140,19 @@ impl App {
         }
     }
 
-    pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        loop {
-            let filtered_files = self.filter_files();
-
-            if self.selected >= filtered_files.len() {
-                self.selected = 0;
-                self.offset = 0;
-            }
-
-            let file_content = if let Some(file) = filtered_files.get(self.selected) {
-                self.read_file_content(file).await.ok()
-            } else {
-                None
-            };
-
-            terminal.draw(|f| ui::draw(f, self, &filtered_files, file_content))?;
-
-            if event::poll(time::Duration::from_millis(200))? {
-                if let Event::Key(key) = event::read()? {
-                    if self.handle_key_event(key, &filtered_files)? {
-                        break;
-                    }
-                }
-            }
-        }
-        Ok(())
+    pub async fn load_files(&mut self) {
+        self.files = walkdir::WalkDir::new(".")
+            .into_iter()
+            .par_bridge()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter(|e| is_text_file(e.path()))
+            .map(|e| e.path().display().to_string())
+            .collect();
+        self.is_loading = false;
     }
 
-    fn filter_files(&self) -> Vec<String> {
+    pub fn filter_files(&self) -> Vec<String> {
         use globset::{Glob, GlobSetBuilder};
 
         if self.filter_input.trim().is_empty() && self.from_input.trim().is_empty() {
@@ -271,23 +268,11 @@ impl App {
         filtered_files
     }
 
-    async fn read_file_content(&self, path: &str) -> io::Result<String> {
-        {
-            let cache = self.file_cache.read();
-            if let Some(content) = cache.get(path) {
-                return Ok(content.clone());
-            }
-        }
-
-        let content = tokio_fs::read_to_string(path).await?;
-        {
-            let mut cache = self.file_cache.write();
-            cache.insert(path.to_string(), content.clone());
-        }
-        Ok(content)
-    }
-
-    fn handle_key_event(&mut self, key: KeyEvent, filtered_files: &[String]) -> io::Result<bool> {
+    pub fn handle_key_event(
+        &mut self,
+        key: KeyEvent,
+        filtered_files: &[String],
+    ) -> io::Result<bool> {
         match key {
             KeyEvent {
                 code: KeyCode::Char('c'),

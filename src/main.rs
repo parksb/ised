@@ -6,6 +6,7 @@ use crossterm::{
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
+use std::sync::mpsc;
 
 use crate::app::App;
 
@@ -23,7 +24,41 @@ async fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new();
-    let res = app.run(&mut terminal).await;
+
+    let (tx, rx) = mpsc::channel();
+    let mut app_clone = app.clone();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            app_clone.load_files().await;
+            let _ = tx.send(app_clone);
+        });
+    });
+
+    let res: io::Result<()> = loop {
+        if let Ok(new_app) = rx.try_recv() {
+            app = new_app;
+        }
+
+        let filtered_files = app.filter_files();
+        let file_content = if !app.is_loading {
+            filtered_files
+                .get(app.selected)
+                .and_then(|file| std::fs::read_to_string(file).ok())
+        } else {
+            None
+        };
+
+        terminal.draw(|f| ui::draw(f, &app, &filtered_files, file_content))?;
+
+        if crossterm::event::poll(std::time::Duration::from_millis(200))? {
+            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
+                if app.handle_key_event(key, &filtered_files)? {
+                    break Ok(());
+                }
+            }
+        }
+    };
 
     disable_raw_mode()?;
     execute!(

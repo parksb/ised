@@ -36,44 +36,50 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
         ])
         .split(columns[1]);
 
-    let list_height = left_rows[0].height as usize - 2;
-    let mut offset = app.offset;
-    if app.selected >= offset + list_height {
-        offset = app.selected + 1 - list_height;
-    } else if app.selected < offset {
-        offset = app.selected;
-    }
+    if app.is_loading {
+        let loading_text = Paragraph::new(Text::from("Loading files..."))
+            .block(Block::default().title("File [L]ist").borders(Borders::ALL));
+        f.render_widget(loading_text, left_rows[0]);
+    } else {
+        let list_height = left_rows[0].height as usize - 2;
+        let mut offset = app.offset;
+        if app.selected >= offset + list_height {
+            offset = app.selected + 1 - list_height;
+        } else if app.selected < offset {
+            offset = app.selected;
+        }
 
-    let visible_files = filtered_files
-        .iter()
-        .skip(offset)
-        .take(list_height)
-        .enumerate()
-        .map(|(i, fpath)| {
-            let content = highlight_match(fpath, &app.filter_input);
-            let mut item = ListItem::new(content);
-            if i + offset == app.selected {
-                item = item.style(
+        let visible_files = filtered_files
+            .iter()
+            .skip(offset)
+            .take(list_height)
+            .enumerate()
+            .map(|(i, fpath)| {
+                let content = highlight_match(fpath, &app.filter_input);
+                let mut item = ListItem::new(content);
+                if i + offset == app.selected {
+                    item = item.style(
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    );
+                }
+                item
+            })
+            .collect::<Vec<_>>();
+
+        let file_list = List::new(visible_files).block(
+            Block::default()
+                .title("File [L]ist")
+                .borders(Borders::ALL)
+                .border_style(if app.focus == Focus::FileList {
+                    Style::default().fg(Color::Cyan)
+                } else {
                     Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                );
-            }
-            item
-        })
-        .collect::<Vec<_>>();
-
-    let file_list = List::new(visible_files).block(
-        Block::default()
-            .title("File [L]ist")
-            .borders(Borders::ALL)
-            .border_style(if app.focus == Focus::FileList {
-                Style::default().fg(Color::Cyan)
-            } else {
-                Style::default()
-            }),
-    );
-    f.render_widget(file_list, left_rows[0]);
+                }),
+        );
+        f.render_widget(file_list, left_rows[0]);
+    }
 
     let filter_input = Paragraph::new(Text::from(app.filter_input.as_str())).block(
         Block::default()
