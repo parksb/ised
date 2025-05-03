@@ -2,6 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::backend::Backend;
 use ratatui::Terminal;
 use std::{fs, io};
+use tokio::{fs as tokio_fs, time};
 
 use crate::config::find_and_load_config;
 use crate::ui;
@@ -78,7 +79,7 @@ impl App {
         }
     }
 
-    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
+    pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         loop {
             let filtered_files = self.filter_files();
 
@@ -87,9 +88,15 @@ impl App {
                 self.offset = 0;
             }
 
-            terminal.draw(|f| ui::draw(f, self, &filtered_files))?;
+            let file_content = if let Some(file) = filtered_files.get(self.selected) {
+                self.read_file_content(file).await.ok()
+            } else {
+                None
+            };
 
-            if event::poll(std::time::Duration::from_millis(200))? {
+            terminal.draw(|f| ui::draw(f, self, &filtered_files, file_content))?;
+
+            if event::poll(time::Duration::from_millis(200))? {
                 if let Event::Key(key) = event::read()? {
                     if self.handle_key_event(key, &filtered_files)? {
                         break;
@@ -165,6 +172,10 @@ impl App {
             })
             .cloned()
             .collect()
+    }
+
+    async fn read_file_content(&self, path: &str) -> io::Result<String> {
+        tokio_fs::read_to_string(path).await
     }
 
     fn handle_key_event(&mut self, key: KeyEvent, filtered_files: &[String]) -> io::Result<bool> {

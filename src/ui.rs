@@ -1,18 +1,17 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Position},
     style::{Color, Modifier, Style},
-    text::{Line, Span, Text},
+    text::{Line, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
-use std::fs;
 
 use crate::app::{App, ConfirmState, Focus};
 use crate::utils::apply_substitution_partial;
 use crate::utils::highlight_diff_lines;
 use crate::utils::highlight_match;
 
-pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String]) {
+pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: Option<String>) {
     let size = f.area();
     let columns = Layout::default()
         .direction(Direction::Horizontal)
@@ -102,17 +101,9 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String]) {
     let blank = Paragraph::new(Text::from(blank_text));
     f.render_widget(blank, left_rows[2]);
 
-    let selected_file = filtered_files.get(app.selected).map(|s| s.to_string());
-    let diff_output = if let Some(file_path) = selected_file {
-        if let Ok(content) = fs::read_to_string(&file_path) {
-            let replaced = apply_substitution_partial(&content, &app.from_input, &app.to_input);
-            highlight_diff_lines(content, replaced)
-        } else {
-            vec![Line::from(Span::styled(
-                "Failed to read file.",
-                Style::default().fg(Color::Red),
-            ))]
-        }
+    let diff_output = if let Some(content) = file_content {
+        let replaced = apply_substitution_partial(&content, &app.from_input, &app.to_input);
+        highlight_diff_lines(content, replaced)
     } else {
         vec![Line::from("No file selected.")]
     };
