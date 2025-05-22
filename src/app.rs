@@ -155,6 +155,10 @@ impl App {
             .map(|e| e.path().display().to_string())
             .collect();
         self.is_loading = false;
+        {
+            let mut cache = self.filtered_files_cache.write();
+            *cache = None;
+        }
     }
 
     pub fn filter_files(&self) -> Vec<String> {
