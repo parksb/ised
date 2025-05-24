@@ -100,7 +100,6 @@ impl App {
         text_len: usize,
         field_width: usize,
     ) {
-        // Only scroll if text is longer than field width
         if text_len <= field_width {
             *view_offset = 0;
             return;
@@ -114,7 +113,6 @@ impl App {
     }
 
     fn scroll_view_left(view_offset: &mut usize, text_len: usize, field_width: usize) {
-        // Only scroll if text is longer than field width
         if text_len <= field_width {
             return;
         }
@@ -124,7 +122,6 @@ impl App {
     }
 
     fn scroll_view_right(view_offset: &mut usize, text_len: usize, field_width: usize) {
-        // Only scroll if text is longer than field width
         if text_len <= field_width {
             return;
         }
@@ -498,13 +495,13 @@ impl App {
                         Self::update_view_offset_for_cursor(
                             self.filter_cursor,
                             &mut self.filter_view_offset,
-                            self.filter_input.len(),
+                            self.filter_input.chars().count(),
                             self.filter_field_width,
                         );
                     } else {
                         Self::scroll_view_left(
                             &mut self.filter_view_offset,
-                            self.filter_input.len(),
+                            self.filter_input.chars().count(),
                             self.filter_field_width,
                         );
                     }
@@ -515,13 +512,13 @@ impl App {
                         Self::update_view_offset_for_cursor(
                             self.from_cursor,
                             &mut self.from_view_offset,
-                            self.from_input.len(),
+                            self.from_input.chars().count(),
                             self.from_field_width,
                         );
                     } else {
                         Self::scroll_view_left(
                             &mut self.from_view_offset,
-                            self.from_input.len(),
+                            self.from_input.chars().count(),
                             self.from_field_width,
                         );
                     }
@@ -532,13 +529,13 @@ impl App {
                         Self::update_view_offset_for_cursor(
                             self.to_cursor,
                             &mut self.to_view_offset,
-                            self.to_input.len(),
+                            self.to_input.chars().count(),
                             self.to_field_width,
                         );
                     } else {
                         Self::scroll_view_left(
                             &mut self.to_view_offset,
-                            self.to_input.len(),
+                            self.to_input.chars().count(),
                             self.to_field_width,
                         );
                     }
@@ -551,12 +548,12 @@ impl App {
                 ..
             } => match self.focus {
                 Focus::FilePathFilter => {
-                    if self.filter_cursor < self.filter_input.len() {
+                    if self.filter_cursor < self.filter_input.chars().count() {
                         self.filter_cursor += 1;
                         Self::update_view_offset_for_cursor(
                             self.filter_cursor,
                             &mut self.filter_view_offset,
-                            self.filter_input.len(),
+                            self.filter_input.chars().count(),
                             self.filter_field_width,
                         );
                     } else {
@@ -568,12 +565,12 @@ impl App {
                     }
                 }
                 Focus::From => {
-                    if self.from_cursor < self.from_input.len() {
+                    if self.from_cursor < self.from_input.chars().count() {
                         self.from_cursor += 1;
                         Self::update_view_offset_for_cursor(
                             self.from_cursor,
                             &mut self.from_view_offset,
-                            self.from_input.len(),
+                            self.from_input.chars().count(),
                             self.from_field_width,
                         );
                     } else {
@@ -585,12 +582,12 @@ impl App {
                     }
                 }
                 Focus::To => {
-                    if self.to_cursor < self.to_input.len() {
+                    if self.to_cursor < self.to_input.chars().count() {
                         self.to_cursor += 1;
                         Self::update_view_offset_for_cursor(
                             self.to_cursor,
                             &mut self.to_view_offset,
-                            self.to_input.len(),
+                            self.to_input.chars().count(),
                             self.to_field_width,
                         );
                     } else {
@@ -631,12 +628,16 @@ impl App {
             } => match self.focus {
                 Focus::FilePathFilter => {
                     if self.filter_cursor > 0 {
-                        self.filter_input.remove(self.filter_cursor - 1);
+                        let char_indices: Vec<(usize, char)> =
+                            self.filter_input.char_indices().collect();
+                        if let Some(&(byte_pos, _)) = char_indices.get(self.filter_cursor - 1) {
+                            self.filter_input.remove(byte_pos);
+                        }
                         self.filter_cursor -= 1;
                         Self::update_view_offset_for_cursor(
                             self.filter_cursor,
                             &mut self.filter_view_offset,
-                            self.filter_input.len(),
+                            self.filter_input.chars().count(),
                             self.filter_field_width,
                         );
                     }
@@ -645,24 +646,32 @@ impl App {
                 }
                 Focus::From => {
                     if self.from_cursor > 0 {
-                        self.from_input.remove(self.from_cursor - 1);
+                        let char_indices: Vec<(usize, char)> =
+                            self.from_input.char_indices().collect();
+                        if let Some(&(byte_pos, _)) = char_indices.get(self.from_cursor - 1) {
+                            self.from_input.remove(byte_pos);
+                        }
                         self.from_cursor -= 1;
                         Self::update_view_offset_for_cursor(
                             self.from_cursor,
                             &mut self.from_view_offset,
-                            self.from_input.len(),
+                            self.from_input.chars().count(),
                             self.from_field_width,
                         );
                     }
                 }
                 Focus::To => {
                     if self.to_cursor > 0 {
-                        self.to_input.remove(self.to_cursor - 1);
+                        let char_indices: Vec<(usize, char)> =
+                            self.to_input.char_indices().collect();
+                        if let Some(&(byte_pos, _)) = char_indices.get(self.to_cursor - 1) {
+                            self.to_input.remove(byte_pos);
+                        }
                         self.to_cursor -= 1;
                         Self::update_view_offset_for_cursor(
                             self.to_cursor,
                             &mut self.to_view_offset,
-                            self.to_input.len(),
+                            self.to_input.chars().count(),
                             self.to_field_width,
                         );
                     }
@@ -678,34 +687,52 @@ impl App {
     fn push_input(&mut self, c: char) {
         match self.focus {
             Focus::FilePathFilter => {
-                self.filter_input.insert(self.filter_cursor, c);
+                let char_indices: Vec<(usize, char)> = self.filter_input.char_indices().collect();
+                let byte_pos = if self.filter_cursor >= char_indices.len() {
+                    self.filter_input.len()
+                } else {
+                    char_indices[self.filter_cursor].0
+                };
+                self.filter_input.insert(byte_pos, c);
                 self.filter_cursor += 1;
                 Self::update_view_offset_for_cursor(
                     self.filter_cursor,
                     &mut self.filter_view_offset,
-                    self.filter_input.len(),
+                    self.filter_input.chars().count(),
                     self.filter_field_width,
                 );
                 self.selected = 0;
                 self.offset = 0;
             }
             Focus::From => {
-                self.from_input.insert(self.from_cursor, c);
+                let char_indices: Vec<(usize, char)> = self.from_input.char_indices().collect();
+                let byte_pos = if self.from_cursor >= char_indices.len() {
+                    self.from_input.len()
+                } else {
+                    char_indices[self.from_cursor].0
+                };
+                self.from_input.insert(byte_pos, c);
                 self.from_cursor += 1;
                 Self::update_view_offset_for_cursor(
                     self.from_cursor,
                     &mut self.from_view_offset,
-                    self.from_input.len(),
+                    self.from_input.chars().count(),
                     self.from_field_width,
                 );
             }
             Focus::To => {
-                self.to_input.insert(self.to_cursor, c);
+                let char_indices: Vec<(usize, char)> = self.to_input.char_indices().collect();
+                let byte_pos = if self.to_cursor >= char_indices.len() {
+                    self.to_input.len()
+                } else {
+                    char_indices[self.to_cursor].0
+                };
+                self.to_input.insert(byte_pos, c);
                 self.to_cursor += 1;
                 Self::update_view_offset_for_cursor(
                     self.to_cursor,
                     &mut self.to_view_offset,
-                    self.to_input.len(),
+                    self.to_input.chars().count(),
                     self.to_field_width,
                 );
             }

@@ -11,6 +11,27 @@ use crate::utils::apply_substitution_partial;
 use crate::utils::highlight_diff_lines;
 use crate::utils::highlight_match;
 
+fn safe_slice_chars(text: &str, start_char: usize, end_char: usize) -> &str {
+    let char_indices: Vec<(usize, char)> = text.char_indices().collect();
+
+    if char_indices.is_empty() || start_char >= char_indices.len() {
+        return "";
+    }
+
+    let start_byte = char_indices[start_char].0;
+    let end_byte = if end_char >= char_indices.len() {
+        text.len()
+    } else {
+        char_indices[end_char].0
+    };
+
+    &text[start_byte..end_byte]
+}
+
+fn char_count(text: &str) -> usize {
+    text.chars().count()
+}
+
 pub fn draw(f: &mut Frame, app: &mut App, filtered_files: &[String], file_content: Option<String>) {
     let size = f.area();
     let columns = Layout::default()
@@ -85,15 +106,15 @@ pub fn draw(f: &mut Frame, app: &mut App, filtered_files: &[String], file_conten
     let from_field_width = (right_rows[1].width.saturating_sub(2)) as usize;
     let to_field_width = (right_rows[2].width.saturating_sub(2)) as usize;
 
-    // Update field widths in app
     app.update_field_widths(filter_field_width, from_field_width, to_field_width);
 
-    let filter_visible_text = if app.filter_input.len() > app.filter_view_offset {
+    let filter_char_count = char_count(&app.filter_input);
+    let filter_visible_text = if filter_char_count > app.filter_view_offset {
         let end = std::cmp::min(
             app.filter_view_offset + filter_field_width,
-            app.filter_input.len(),
+            filter_char_count,
         );
-        &app.filter_input[app.filter_view_offset..end]
+        safe_slice_chars(&app.filter_input, app.filter_view_offset, end)
     } else {
         ""
     };
@@ -154,12 +175,10 @@ pub fn draw(f: &mut Frame, app: &mut App, filtered_files: &[String], file_conten
     );
     f.render_widget(diff_view, right_rows[0]);
 
-    let from_visible_text = if app.from_input.len() > app.from_view_offset {
-        let end = std::cmp::min(
-            app.from_view_offset + from_field_width,
-            app.from_input.len(),
-        );
-        &app.from_input[app.from_view_offset..end]
+    let from_char_count = char_count(&app.from_input);
+    let from_visible_text = if from_char_count > app.from_view_offset {
+        let end = std::cmp::min(app.from_view_offset + from_field_width, from_char_count);
+        safe_slice_chars(&app.from_input, app.from_view_offset, end)
     } else {
         ""
     };
@@ -186,9 +205,10 @@ pub fn draw(f: &mut Frame, app: &mut App, filtered_files: &[String], file_conten
         ));
     }
 
-    let to_visible_text = if app.to_input.len() > app.to_view_offset {
-        let end = std::cmp::min(app.to_view_offset + to_field_width, app.to_input.len());
-        &app.to_input[app.to_view_offset..end]
+    let to_char_count = char_count(&app.to_input);
+    let to_visible_text = if to_char_count > app.to_view_offset {
+        let end = std::cmp::min(app.to_view_offset + to_field_width, to_char_count);
+        safe_slice_chars(&app.to_input, app.to_view_offset, end)
     } else {
         ""
     };
