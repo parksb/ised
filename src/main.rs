@@ -50,7 +50,7 @@ async fn main() -> io::Result<()> {
             None
         };
 
-        terminal.draw(|f| ui::draw(f, &app, &filtered_files, file_content))?;
+        terminal.draw(|f| ui::draw(f, &mut app, &filtered_files, file_content))?;
 
         if crossterm::event::poll(Duration::from_millis(200))? {
             if let Event::Key(key) = crossterm::event::read()? {

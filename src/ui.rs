@@ -11,7 +11,7 @@ use crate::utils::apply_substitution_partial;
 use crate::utils::highlight_diff_lines;
 use crate::utils::highlight_match;
 
-pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: Option<String>) {
+pub fn draw(f: &mut Frame, app: &mut App, filtered_files: &[String], file_content: Option<String>) {
     let size = f.area();
     let columns = Layout::default()
         .direction(Direction::Horizontal)
@@ -81,7 +81,23 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
         f.render_widget(file_list, left_rows[0]);
     }
 
-    let filter_input = Paragraph::new(Text::from(app.filter_input.as_str())).block(
+    let filter_field_width = (left_rows[1].width.saturating_sub(2)) as usize;
+    let from_field_width = (right_rows[1].width.saturating_sub(2)) as usize;
+    let to_field_width = (right_rows[2].width.saturating_sub(2)) as usize;
+
+    // Update field widths in app
+    app.update_field_widths(filter_field_width, from_field_width, to_field_width);
+
+    let filter_visible_text = if app.filter_input.len() > app.filter_view_offset {
+        let end = std::cmp::min(
+            app.filter_view_offset + filter_field_width,
+            app.filter_input.len(),
+        );
+        &app.filter_input[app.filter_view_offset..end]
+    } else {
+        ""
+    };
+    let filter_input = Paragraph::new(Text::from(filter_visible_text)).block(
         Block::default()
             .title("[G]lob Filter")
             .borders(Borders::ALL)
@@ -93,8 +109,13 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
     );
     f.render_widget(filter_input, left_rows[1]);
     if app.focus == Focus::FilePathFilter {
+        let cursor_x = if app.filter_cursor >= app.filter_view_offset {
+            app.filter_cursor - app.filter_view_offset
+        } else {
+            0
+        };
         f.set_cursor_position(Position::new(
-            left_rows[1].x + 1 + app.filter_cursor as u16,
+            left_rows[1].x + 1 + cursor_x as u16,
             left_rows[1].y + 1,
         ));
     }
@@ -133,7 +154,16 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
     );
     f.render_widget(diff_view, right_rows[0]);
 
-    let from_paragraph = Paragraph::new(Text::from(app.from_input.as_str())).block(
+    let from_visible_text = if app.from_input.len() > app.from_view_offset {
+        let end = std::cmp::min(
+            app.from_view_offset + from_field_width,
+            app.from_input.len(),
+        );
+        &app.from_input[app.from_view_offset..end]
+    } else {
+        ""
+    };
+    let from_paragraph = Paragraph::new(Text::from(from_visible_text)).block(
         Block::default()
             .title("[F]rom")
             .borders(Borders::ALL)
@@ -145,13 +175,24 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
     );
     f.render_widget(from_paragraph, right_rows[1]);
     if app.focus == Focus::From {
+        let cursor_x = if app.from_cursor >= app.from_view_offset {
+            app.from_cursor - app.from_view_offset
+        } else {
+            0
+        };
         f.set_cursor_position(Position::new(
-            right_rows[1].x + 1 + app.from_cursor as u16,
+            right_rows[1].x + 1 + cursor_x as u16,
             right_rows[1].y + 1,
         ));
     }
 
-    let to_paragraph = Paragraph::new(Text::from(app.to_input.as_str())).block(
+    let to_visible_text = if app.to_input.len() > app.to_view_offset {
+        let end = std::cmp::min(app.to_view_offset + to_field_width, app.to_input.len());
+        &app.to_input[app.to_view_offset..end]
+    } else {
+        ""
+    };
+    let to_paragraph = Paragraph::new(Text::from(to_visible_text)).block(
         Block::default()
             .title("[T]o")
             .borders(Borders::ALL)
@@ -163,8 +204,13 @@ pub fn draw(f: &mut Frame, app: &App, filtered_files: &[String], file_content: O
     );
     f.render_widget(to_paragraph, right_rows[2]);
     if app.focus == Focus::To {
+        let cursor_x = if app.to_cursor >= app.to_view_offset {
+            app.to_cursor - app.to_view_offset
+        } else {
+            0
+        };
         f.set_cursor_position(Position::new(
-            right_rows[2].x + 1 + app.to_cursor as u16,
+            right_rows[2].x + 1 + cursor_x as u16,
             right_rows[2].y + 1,
         ));
     }
